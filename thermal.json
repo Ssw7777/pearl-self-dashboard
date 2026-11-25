@@ -1,0 +1,7 @@
+{
+  "hot": 80,
+  "cool": 70,
+  "hot_sec": 60,
+  "cool_sec": 180,
+  "_说明": "达到 hot 并持续 hot_sec 秒自动停矿；降到 cool 并持续 cool_sec 秒自动恢复"
+}

@@ -1,0 +1,18 @@
+# 运行时数据与私密配置
+data/
+secrets/
+*.log
+*.log.err
+official.log*
+guardian.log
+guardian.state.json
+agent/config.json
+PRIVATE.md
+miner/
+id_prl
+id_prl.pub
+__pycache__/
+*.pyc
+*.zip
+.DS_Store
+Thumbs.db

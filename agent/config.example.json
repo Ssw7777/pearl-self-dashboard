@@ -1,0 +1,12 @@
+{
+  "worker": "rig-a",
+  "wallet": "<YOUR_PRL_ADDRESS>",
+  "dashboard_url": "http://127.0.0.1:8088",
+  "url": "http://127.0.0.1:8088/api/rig",
+  "token": "<RIG_TOKEN>",
+  "interval_sec": 10,
+  "miner_log": "official.log.err",
+  "tunnel_host": "",
+  "tunnel_local_port": 18443,
+  "pool_tls": "global.pearlfortune.org:443"
+}

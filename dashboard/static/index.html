@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRL 挖矿看板</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--line:#e6e4dd;--txt:#16160f;--mut:#7a7a70;
+--grn:#0f7a4a;--grnbg:#e7f6ee;--amb:#9a5b00;--ambbg:#fdf1dc;--red:#b42318;--redbg:#fdecea;--acc:#b4530a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 18px 60px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-size:20px;margin:0 0 3px;letter-spacing:-.2px}
+h1 span{color:var(--acc)}
+.sub{color:var(--mut);font-size:12px}
+a{color:var(--acc);text-decoration:none}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--mut);display:inline-block}
+.pill:hover{border-color:#cfcdc4}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+
+/* 汇总条 */
+.sumbar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+@media(max-width:820px){.sumbar{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sum{background:#16160f;color:#fff;border-radius:12px;padding:11px 14px}
+.sum .k{font-size:11px;color:#b8b8ae}
+.sum .v{font-size:22px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+
+/* 机器卡片 */
+.mgrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));margin-bottom:20px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;border-top:3px solid var(--mc)}
+.mhead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.mname{font-size:15px;font-weight:700}
+.mgpu{font-size:11.5px;color:var(--mut);margin-top:1px}
+.mtag{font-size:10.5px;color:var(--mc);background:color-mix(in srgb,var(--mc) 9%,#fff);border:1px solid color-mix(in srgb,var(--mc) 25%,#fff);padding:1px 8px;border-radius:999px;font-weight:600;white-space:nowrap}
+.mstate{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);margin-top:2px}
+.dot{width:8px;height:8px;border-radius:50%;background:#c9c7bf;display:inline-block}
+.dot.on{background:#0f7a4a;box-shadow:0 0 0 3px #e7f6ee}
+.dot.warn{background:var(--amb);box-shadow:0 0 0 3px #fdf1dc}
+.dot.off{background:var(--red);box-shadow:0 0 0 3px #fdecea}
+.big{display:flex;align-items:baseline;gap:8px;margin:2px 0 2px}
+.big b{font-size:30px;font-weight:750;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.big i{font-style:normal;font-size:12px;color:var(--mut)}
+.mrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.mstat{background:#faf9f6;border:1px solid var(--line);border-radius:10px;padding:7px 9px}
+.mstat .k{font-size:10.5px;color:var(--mut)}
+.mstat .v{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}
+th{color:var(--mut);font-weight:500;font-size:11.5px;background:#fbfbf9}
+th:first-child,td:first-child{text-align:left}
+th:nth-child(2),td:nth-child(2){text-align:left}
+tr:last-child td{border-bottom:none}
+tfoot td{background:#fbfbf9;font-weight:750}
+.sec{margin-top:20px}
+.sec>h2{font-size:18px;color:var(--txt);font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;letter-spacing:-.2px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+canvas{width:100%;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.ranges{display:flex;gap:4px;margin-left:auto}
+.rbtn{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:11.5px;color:var(--mut);cursor:pointer;font-family:inherit}
+.rbtn:hover{border-color:#cfcdc4;color:var(--txt)}
+.rbtn.on{background:var(--grnbg);border-color:#bfe6d2;color:var(--grn);font-weight:600}
+.wcell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.wcell .k{font-size:11px;color:var(--mut)}
+.wcell .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.two{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+.foot{color:var(--mut);font-size:11px;margin-top:24px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--mut)}
+.warnflag{color:var(--amb);font-weight:600}
+/* 远程控制条 */
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--card,#fff);
+     border:1px solid var(--line,#e6e4dd);border-radius:12px;padding:9px 12px;margin-bottom:14px}
+.ctl-l{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ctl-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.ctl-t{font-size:12px;font-weight:700;color:var(--mut,#7a7a70)}
+.ctl select,.ctl input{font:13px/1.4 inherit;padding:6px 10px;border:1px solid var(--line,#e6e4dd);
+     border-radius:9px;background:#fff;color:var(--txt,#16160f);outline:none}
+.ctl input{width:170px}
+.ctl select:focus,.ctl input:focus{border-color:var(--acc,#b4530a);box-shadow:0 0 0 3px rgba(180,83,10,.12)}
+.ctl-s{font-size:12px;color:var(--mut,#7a7a70)}
+.ctlb{border:0;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:700;color:#fff;cursor:pointer}
+.ctlb.stop{background:var(--red,#b42318)}
+.ctlb.start{background:var(--grn,#0f7a4a)}
+.ctlb:disabled{opacity:.5;cursor:not-allowed}
+.ctl-msg{flex-basis:100%;font-size:12px;color:var(--mut,#7a7a70)}
+.ctl-msg.ok{color:var(--grn,#0f7a4a)}
+.ctl-msg.err{color:var(--red,#b42318)}
+@media(max-width:640px){.ctl-r{margin-left:0;width:100%}.ctl input{flex:1;width:auto}}
+
+  /* 顶部币价 */
+  .price{background:var(--card);border:1px solid var(--line);border-radius:12px;
+         padding:7px 16px;display:flex;flex-direction:column;justify-content:center;gap:1px}
+  .price .p-usd{font-size:22px;font-weight:800;line-height:1.1;color:var(--txt);
+                font-variant-numeric:tabular-nums}
+  .price .p-sub{font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>PRL 挖矿看板 <span>· 实时</span></h1>
+      <div class="sub" id="sub">连接中…</div>
+    </div>
+    <div class="price" title="PRL 实时价格">
+      <div class="p-usd" id="pUsd">$—</div>
+      <div class="p-sub" id="pCny">实时价格</div>
+    </div>
+
+    <div class="pills">
+      <a class="pill" href="javascript:location.reload()">刷新</a>
+    </div>
+  </div>
+
+  <!-- 远程控制：点按钮暂停 / 恢复某台机器（需要控制密码） -->
+  <div class="ctl">
+    <div class="ctl-l">
+      <span class="ctl-t">远程控制</span>
+      <select id="ctlW"></select>
+      <span class="ctl-s" id="ctlS">—</span>
+    </div>
+    <div class="ctl-r">
+      <input id="ctlK" type="password" placeholder="控制密码" autocomplete="current-password">
+      <button class="ctlb stop" id="ctlStop">■ 暂停</button>
+      <button class="ctlb start" id="ctlStart">▶ 恢复</button>
+    </div>
+    <div class="ctl-msg" id="ctlM"></div>
+  </div>
+
+  <div class="sumbar" id="sumbar"></div>
+  <div class="mgrid" id="overview"></div>
+
+  <div class="sec">
+    <h2>算力对比
+      <span class="ranges" id="ranges">
+        <button class="rbtn on" data-h="0">10 分钟</button>
+        <button class="rbtn" data-h="1">1 小时</button>
+        <button class="rbtn" data-h="6">6 小时</button>
+        <button class="rbtn" data-h="12">12 小时</button>
+        <button class="rbtn" data-h="24">24 小时</button>
+      </span>
+    </h2>
+    <div class="box">
+      <div class="legend" id="legend"></div>
+      <canvas id="chart" width="2400" height="380"></canvas>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>对账表 · 按机器分开统计</h2>
+    <table id="ledger">
+      <thead><tr><th>机器</th><th>显卡</th><th>过去 24 小时</th><th>折合</th><th>累计产出</th><th>折合</th><th>状态</th></tr></thead>
+      <tbody id="ledgerBody"><tr><td colspan="7">加载中…</td></tr></tbody>
+      <tfoot id="ledgerFoot"></tfoot>
+    </table>
+    <div class="sub" style="margin-top:8px">
+      日净利为<b>预估值</b>：按当前算力 × 当前全网难度 × 当前币价换算，<b>与实际运行时间、功率稳定性有关</b>（打游戏 / 高温保护 / 断线时实际收益会低于预估）。电费按整机 220W × 0.5 元/度、汇率 6.7 估算。
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>每日产出（PRL）</h2>
+    <table id="dailyTable">
+      <thead id="dailyHead"></thead>
+      <tbody id="dailyBody"><tr><td>加载中…</td></tr></tbody>
+    </table>
+    <div class="sub" style="margin-top:8px">统计起点 2026-11-23（两台机器接入当天）；这个地址更早的历史数据不计入。</div>
+  </div>
+
+  <div class="sec">
+    <h2>活动情况（超过 10 分钟才记录 · 每页 10 条）</h2>
+    <table id="events">
+      <thead><tr><th>时间</th><th>机器</th><th>状态</th><th>持续</th></tr></thead>
+      <tbody id="eventBody"><tr><td colspan="4">暂无记录</td></tr></tbody>
+    </table>
+    <div id="evPager" style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <button class="rbtn" id="evPrev">← 上一页</button>
+      <span class="sub" id="evInfo" style="margin:0"></span>
+      <button class="rbtn" id="evNext">下一页 →</button>
+    </div>
+
+  </div>
+
+  <div class="sec">
+    <h2>打款记录（矿池转入链上地址的每一笔）</h2>
+    <table id="payouts">
+      <thead><tr><th>时间</th><th>金额</th><th>区块</th><th>交易</th></tr></thead>
+      <tbody id="payoutBody"><tr><td colspan="4">暂无打款记录</td></tr></tbody>
+    </table>
+    <div class="sub" style="margin-top:8px">矿池按 PPS 结算：区块成熟（100 个块）后累计到待结算余额，达到池子打款门槛后自动转入你的地址，链上会留下一条转入记录。</div>
+  </div>
+
+
+
+  <div class="sec">
+    <h2>直达查询 · 我的地址</h2>
+    <div class="box">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <a class="pill" id="lnkPool" href="#" target="_blank" rel="noopener"
+           style="font-weight:700;font-size:13px">矿池看板（直达我的地址）→</a>
+        <a class="pill" id="lnkScan" href="#" target="_blank" rel="noopener"
+           style="font-weight:700;font-size:13px">prlscan 链上 →</a>
+        <a class="pill" id="lnkTrack" href="#" target="_blank" rel="noopener"
+           style="font-weight:700;font-size:13px">pearltrack 链上 →</a>
+        <button class="rbtn" onclick="copyAddr()" style="padding:6px 12px;font-weight:700">复制地址</button>
+        <span id="copytip" class="sub" style="margin:0"></span>
+      </div>
+      <div class="mono" id="pooladdr" style="margin-top:10px;font-size:12.5px;color:#16160f;word-break:break-all"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>数据：各机 agent 每 10 秒上报 · 历史每 30 秒采样，保留 7 天</span>
+    <span class="mono">只读展示 · 每 5 秒自动刷新 · 矿池 pearlfortune PPS 5% · 温度保护 80°C 停 / 70°C 恢复 · 75°C 预警</span>
+  </div>
+</div>
+
+<script>
+const COLORS = ["#0f7a4a", "#2563eb", "#b45309", "#7c3aed", "#0e7490", "#be123c"];
+const fmt = (n, d = 2) => (n === null || n === undefined || isNaN(n)) ? "—" : Number(n).toFixed(d);
+const esc = (s) => String(s == null ? "" : s).replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+function hms(sec) {
+  if (sec == null) return "—";
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60);
+  return h > 0 ? h + " 小时 " + m + " 分" : m + " 分 " + (sec % 60) + " 秒";
+}
+function hhmm(ts) {
+  const d = new Date(ts * 1000);
+  return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+}
+function shortGpu(name) {
+  return (name || "").replace("NVIDIA GeForce ", "").replace("NVIDIA ", "").replace("AMD ", "").trim();
+}
+
+let WS = [], curH = 0, priceUsd = null;
+
+async function init() {
+  WS = [];
+  try {
+    const r = await fetch("/api/workers?t=" + Date.now(), { cache: "no-store" });
+    const list = await r.json();
+    WS = list.map((w, i) => ({ ...w, color: COLORS[i % COLORS.length], rig: null, earn: null, series: [] }));
+  } catch (e) {
+    document.getElementById("sub").textContent = "取不到机器列表：" + e.message;
+    return;
+  }
+  buildShell();
+  await Promise.all(WS.map(w => loadRig(w)));
+  await Promise.all(WS.map(w => loadEarn(w)));
+  await loadSeries(curH);
+  loadEvents();
+  tick();
+  paintAddr();
+}
+
+function buildShell() {
+  document.getElementById("overview").innerHTML = WS.map(w => `
+    <div class="mcard" style="--mc:${w.color}">
+      <div class="mhead">
+        <div>
+          <div class="mname">${esc(w.label)}</div>
+          <div class="mgpu" id="gpu-${w.id}">显卡识别中…</div>
+        </div>
+        <span class="mtag">${esc(w.id)}</span>
+      </div>
+      <div class="mstate"><span class="dot" id="dot-${w.id}"></span><span id="st-${w.id}">—</span></div>
+      <div class="big"><b id="th-${w.id}">—</b><i>TH/s</i></div>
+      <div class="mono" id="hint-${w.id}">&nbsp;</div>
+      <div class="mrow">
+        <div class="mstat"><div class="k">功耗</div><div class="v" id="pw-${w.id}">—</div></div>
+        <div class="mstat"><div class="k">温度</div><div class="v" id="tc-${w.id}">—</div></div>
+        <div class="mstat"><div class="k">风扇</div><div class="v" id="fan-${w.id}">—</div></div>
+        <div class="mstat"><div class="k">日产出</div><div class="v" id="d-${w.id}">—</div></div>
+        <div class="mstat"><div class="k">日净利（预估）</div><div class="v" id="p-${w.id}">—</div></div>
+        <div class="mstat"><div class="k">过去 24 小时</div><div class="v" id="td-${w.id}">—</div><div class="k" id="tdc-${w.id}"></div></div>
+      </div>
+    </div>`).join("");
+
+  document.getElementById("legend").innerHTML = WS.map(w =>
+    `<span><i style="background:${w.color}"></i>${esc(w.label)}</span>`).join("");
+
+
+  document.getElementById("dailyHead").innerHTML = "<tr><th>日期</th>" +
+    WS.map(w => `<th style="color:${w.color}">${esc(w.label)}</th>`).join("") +
+    "<th>合计</th></tr>";
+
+  renderLedger();
+}
+
+function stateOf(rig) {
+  const age = Math.floor(Date.now() / 1000) - (rig.ts || 0);
+  const on = rig.online && age < 45;
+  const st = rig.state || "";
+  if (st.indexOf("thermal") > -1) return { cls: "warn", text: "高温保护", on: false, warn: true };
+  if (st.indexOf("paused") === 0) return { cls: "warn", text: "已暂停" + (rig.game ? "（" + rig.game + "）" : "（手动）"), on: false };
+  if (on) return { cls: "on", text: "挖矿中", on: true };
+  return { cls: "off", text: "离线", on: false };
+}
+
+async function loadRig(w) {
+  try {
+    const r = await fetch("/api/rig?w=" + w.id + "&t=" + Date.now(), { cache: "no-store" });
+    w.rig = await r.json();
+  } catch (e) { w.rig = null; }
+  render(w);
+}
+
+function render(w) {
+  const d = w.rig || {};
+  const s = stateOf(d);
+  const el = id => document.getElementById(id + "-" + w.id);
+  if (!el("dot")) return;
+  el("dot").className = "dot " + s.cls;
+  el("st").textContent = s.text + (s.on ? " · 已运行 " + hms(d.uptime_s) : "");
+
+  const gpus = d.gpus || [];
+  const names = gpus.map(g => shortGpu(g.name)).filter(Boolean);
+  const gpuTxt = names.length ? (names.length > 1 ? names.join(" + ") : names[0]) : "—";
+  el("gpu").textContent = gpuTxt + (names.length > 1 ? `（${names.length} 张卡）` : "");
+
+  el("th").textContent = s.on ? fmt(d.total_th, 2) : "—";
+  el("hint").textContent = d.ts
+    ? "上次上报 " + new Date(d.ts * 1000).toLocaleTimeString("zh-CN")
+    : "—";
+  el("pw").textContent = s.on ? fmt(d.power_w, 0) + " W" : "—";
+  el("tc").textContent = s.on ? fmt(d.max_temp, 0) + "°C" : "—";
+  const fans = gpus.map(g => g.fan).filter(v => v != null);
+  el("fan").textContent = s.on && fans.length ? fmt(Math.max(...fans), 0) + "%" : "—";
+  el("d").textContent = s.on ? fmt(d.est_day_prl, 3) : "—";
+  const p = el("p");
+  p.textContent = s.on && d.profit_cny_day != null ? "¥" + fmt(d.profit_cny_day, 2) : "—";
+  p.style.color = (s.on && d.profit_cny_day > 0) ? "#0f7a4a" : "inherit";
+
+  renderLedger();
+}
+
+async function loadEarn(w) {
+  try {
+    const r = await fetch("/api/earnings?w=" + w.id + "&t=" + Date.now(), { cache: "no-store" });
+    w.earn = await r.json();
+  } catch (e) { w.earn = null; }
+  const e = w.earn || {};
+  if (e.price_usd) priceUsd = e.price_usd;
+  const set = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
+  const h24 = e.last24_prl || 0;
+  const px = e.price_usd || priceUsd || 0;
+  set("td-" + w.id, fmt(h24, 4));
+  set("tdc-" + w.id, "≈ ¥" + fmt(h24 * px * 6.7, 2));
+  drawDailyList();
+  renderLedger();
+  renderPayouts();
+}
+
+function renderLedger() {
+  const body = document.getElementById("ledgerBody");
+  if (!body) return;
+  if (!WS.length) return;
+  let t24 = 0, tAcc = 0, tCny = 0, t24Cny = 0;
+  body.innerHTML = WS.map(w => {
+    const e = w.earn || {};
+    const h24 = e.last24_prl || 0, acc = e.total_accrued_prl || 0;
+    const px = priceUsd || 0;
+    const cny = acc * px * 6.7;
+    const cny24 = h24 * px * 6.7;
+    t24 += h24; tAcc += acc; tCny += cny; t24Cny += cny24;
+    const s = stateOf(w.rig || {});
+    const gpus = (w.rig && w.rig.gpus) || [];
+    const names = gpus.map(g => shortGpu(g.name)).filter(Boolean);
+    return `<tr>
+      <td><b style="color:${w.color}">${esc(w.label)}</b> <span class="mono">${esc(w.id)}</span></td>
+      <td>${esc(names.join(" + ") || "—")}</td>
+      <td>${fmt(h24, 4)}</td>
+      <td>¥${fmt(cny24, 2)}</td>
+      <td><b>${fmt(acc, 4)}</b></td>
+      <td>¥${fmt(cny, 2)}</td>
+      <td>${esc(s.text)}</td></tr>`;
+  }).join("");
+  document.getElementById("ledgerFoot").innerHTML = `<tr>
+    <td>合计（${WS.length} 台）</td><td>—</td>
+    <td>${fmt(t24, 4)}</td><td>¥${fmt(t24Cny, 2)}</td>
+    <td>${fmt(tAcc, 4)}</td><td>¥${fmt(tCny, 2)}</td><td>—</td></tr>`;
+}
+
+async function loadSeries(h) {
+  curH = h;
+  document.querySelectorAll("#ranges .rbtn").forEach(b => b.classList.toggle("on", Number(b.dataset.h) === h));
+  if (h === 0) {
+    WS.forEach(w => w.series = (live[w.id] || []).map(x => ({ t: x.t, th: x.v })));
+    drawChart();
+    return;
+  }
+  await Promise.all(WS.map(async w => {
+    try {
+      const r = await fetch("/api/history?w=" + w.id + "&h=" + h + "&t=" + Date.now(), { cache: "no-store" });
+      const d = await r.json();
+      w.series = d.points || [];
+    } catch (e) { w.series = []; }
+  }));
+  drawChart();
+}
+
+function drawChart() {
+  const c = document.getElementById("chart"), ctx = c.getContext("2d");
+  const W = c.width, H = c.height, PAD_L = 52, PAD_B = 36, PAD_T = 14;
+  ctx.clearRect(0, 0, W, H);
+  // 纵轴：包含 0（离线机器要能看到掉到 0），但只在正数部分留余量
+  const every = WS.flatMap(w => w.series.map(p => p.th || 0));
+  const pos = every.filter(v => v > 0);
+  let lo, hi;
+  if (!pos.length) { lo = 0; hi = 10; }
+  else {
+    hi = Math.max(...pos);
+    lo = Math.min(...every);
+    const span = Math.max(hi - lo, 1);
+    const pad = Math.max(span * 0.08, 0.6);
+    lo = lo > 0 ? Math.max(0, lo - pad) : 0;
+    hi = hi + pad;
+  }
+  ctx.strokeStyle = "#efeee9"; ctx.lineWidth = 2;
+  ctx.fillStyle = "#7a7a70"; ctx.font = "20px sans-serif";
+  for (let i = 0; i <= 4; i++) {
+    const y = PAD_T + (H - PAD_T - PAD_B) * i / 4;
+    const val = hi - (hi - lo) * i / 4;
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - 10, y); ctx.stroke();
+    ctx.fillText(val.toFixed(val < 10 ? 1 : 0), 8, y + 7);
+  }
+  const anySerie = WS.find(w => w.series.length > 1);
+  if (!anySerie) {
+    ctx.fillStyle = "#7a7a70"; ctx.font = "26px sans-serif";
+    ctx.fillText("这个时间段还没有历史数据", PAD_L + 20, H / 2);
+    return;
+  }
+  WS.forEach(w => {
+    if (w.series.length < 2) return;
+    const baseY = H - PAD_B, plotH = baseY - PAD_T;
+    ctx.beginPath();
+    w.series.forEach((p, i) => {
+      const x = PAD_L + (W - PAD_L - 10) * i / (w.series.length - 1);
+      const y = baseY - (((p.th || 0) - lo) / (hi - lo)) * plotH;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.strokeStyle = w.color; ctx.lineWidth = 3; ctx.stroke();
+  });
+  const s0 = anySerie.series;
+  const t0 = s0[0].t, t1 = s0[s0.length - 1].t;
+  ctx.fillStyle = "#7a7a70"; ctx.font = "20px sans-serif";
+  ctx.fillText(hhmm(t0), PAD_L, H - 8);
+  ctx.fillText(hhmm((t0 + t1) / 2), W / 2 - 24, H - 8);
+  ctx.fillText(hhmm(t1), W - 76, H - 8);
+}
+
+function hmOf(ts) {
+  const d = new Date(ts * 1000);
+  return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+}
+
+function drawDailyList() {
+  const head = document.getElementById("dailyHead"), body = document.getElementById("dailyBody");
+  if (!head || !body) return;
+  head.innerHTML = "<tr><th>日期</th>" +
+    WS.map(w => `<th style="color:${w.color}">${esc(w.label)}</th>`).join("") +
+    "<th>合计</th></tr>";
+
+  // 每天实际有数据的时间段（跨机器取最早/最晚）
+  const cov = {};
+  WS.forEach(w => {
+    const c = (w.earn && w.earn.coverage) || {};
+    Object.keys(c).forEach(d => {
+      const f = c[d][0], t = c[d][1];
+      if (!cov[d]) cov[d] = [f, t];
+      else { cov[d][0] = Math.min(cov[d][0], f); cov[d][1] = Math.max(cov[d][1], t); }
+    });
+  });
+
+  const dates = new Set();
+  WS.forEach(w => ((w.earn && w.earn.accrual) || []).forEach(r => dates.add(r.date)));
+  const list = Array.from(dates).sort().reverse();
+  const px = priceUsd || 0;
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="${WS.length + 2}">暂无数据</td></tr>`;
+    return;
+  }
+
+  const rows = list.map(d => {
+    const vals = WS.map(w => {
+      const hit = ((w.earn && w.earn.accrual) || []).find(r => r.date === d);
+      return hit ? hit.prl : 0;
+    });
+    return { d, vals, total: vals.reduce((a, b) => a + b, 0) };
+  });
+
+  const colTotals = WS.map((_, i) => rows.reduce((s, r) => s + r.vals[i], 0));
+  const grand = rows.reduce((s, r) => s + r.total, 0);
+
+  body.innerHTML = rows.map(r => {
+    const c = cov[r.d];
+    const range = c ? `<span class="mono" style="margin-left:6px">${hmOf(c[0])}–${hmOf(c[1])}</span>` : "";
+    const cells = r.vals.map(v =>
+      `<td>${fmt(v, 4)} <span class="mono">≈¥${fmt(v * px * 6.7, 2)}</span></td>`).join("");
+    return `<tr><td>${r.d}${range}</td>${cells}` +
+      `<td><b>${fmt(r.total, 4)}</b> <span class="mono">≈¥${fmt(r.total * px * 6.7, 2)}</span></td></tr>`;
+  }).join("");
+
+  const tfoot = `<tr style="background:#fbfbf9;font-weight:750">
+      <td>合计（${rows.length} 天）</td>
+      ${colTotals.map(v => `<td>${fmt(v, 4)} <span class="mono">≈¥${fmt(v * px * 6.7, 2)}</span></td>`).join("")}
+      <td><b>${fmt(grand, 4)}</b> <span class="mono">≈¥${fmt(grand * px * 6.7, 2)}</span></td>
+    </tr>`;
+  body.innerHTML += tfoot;
+}
+
+function duration(sec) {
+  if (sec >= 3600) return Math.floor(sec / 3600) + " 小时 " + Math.floor(sec % 3600 / 60) + " 分";
+  if (sec >= 60) return Math.floor(sec / 60) + " 分";
+  return sec + " 秒";
+}
+
+function renderPayouts() {
+  const body = document.getElementById("payoutBody");
+  if (!body) return;
+  const rows = [];
+  const seen = new Set();
+  WS.forEach(w => ((w.earn && w.earn.payouts) || []).forEach(p => {
+    // 多台机器共用一个收款地址时，同一笔打款会被取到多次，按 txid 去重
+    const k = p.txid || (p.ts + ":" + p.prl);
+    if (seen.has(k)) return;
+    seen.add(k);
+    rows.push({ ...p, color: w.color });
+  }));
+  rows.sort((a, b) => b.ts - a.ts);
+  if (!rows.length) { body.innerHTML = `<tr><td colspan="4">暂无打款记录（还没到池子门槛）</td></tr>`; return; }
+  body.innerHTML = rows.slice(0, 15).map(p => {
+    const d = new Date(p.ts * 1000);
+    const hm = ("0" + d.getMonth()).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + " " +
+               ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    return `<tr><td>${hm}</td><td><b style="color:${p.color}">${fmt(p.prl, 4)} PRL</b></td>
+      <td>${p.height ?? "—"}</td><td class="mono">${(p.txid || "").slice(0, 12)}…</td></tr>`;
+  }).join("");
+}
+
+function stateLabel(s) {
+  return s === "mining" ? '<span style="color:#0f7a4a">挖矿中</span>'
+       : s === "paused" ? '<span style="color:#b4530a">暂停</span>'
+       : '<span style="color:#b42318">关机</span>';
+}
+
+function durText(sec) {
+  if (sec >= 3600) return Math.floor(sec / 3600) + " 小时 " + Math.floor(sec % 3600 / 60) + " 分";
+  if (sec >= 60) return Math.floor(sec / 60) + " 分";
+  return Math.max(1, Math.round(sec)) + " 秒";
+}
+
+let EVENTS = [], evPage = 0;
+const EV_PER_PAGE = 10;
+
+function stateLabel(s) {
+  return s === "mining" ? '<span style="color:#0f7a4a">挖矿中</span>'
+       : s === "paused" ? '<span style="color:#b4530a">暂停</span>'
+       : '<span style="color:#b42318">关机</span>';
+}
+
+function durText(sec) {
+  if (sec >= 3600) return Math.floor(sec / 3600) + " 小时 " + Math.floor(sec % 3600 / 60) + " 分";
+  if (sec >= 60) return Math.floor(sec / 60) + " 分";
+  return Math.max(1, Math.round(sec)) + " 秒";
+}
+
+function renderEventsPage() {
+  const body = document.getElementById("eventBody");
+  const info = document.getElementById("evInfo");
+  if (!body) return;
+  const pages = Math.max(1, Math.ceil(EVENTS.length / EV_PER_PAGE));
+  if (evPage >= pages) evPage = pages - 1;
+  if (evPage < 0) evPage = 0;
+  const now = Date.now() / 1000;
+  const slice = EVENTS.slice(evPage * EV_PER_PAGE, evPage * EV_PER_PAGE + EV_PER_PAGE);
+  if (!slice.length) {
+    body.innerHTML = `<tr><td colspan="4">暂无记录（不足 10 分钟的不计）</td></tr>`;
+  } else {
+    body.innerHTML = slice.map(e => {
+      const t0 = new Date(e.start * 1000), t1 = new Date(e.end * 1000);
+      const hm = d => ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+      const ongoing = (now - e.end) < 300;
+      const sec = ongoing ? (now - e.start) : (e.end - e.start);
+      return `<tr>
+        <td>${t0.getMonth() + 1}/${t0.getDate()} ${hm(t0)} – ${ongoing ? "现在" : hm(t1)}</td>
+        <td><b style="color:${e.color}">${esc(e.label)}</b></td>
+        <td>${stateLabel(e.state)}</td>
+        <td>${durText(sec)}${ongoing ? ' <span class="mono">进行中</span>' : ""}</td></tr>`;
+    }).join("");
+  }
+  if (info) info.textContent = `第 ${evPage + 1} / ${pages} 页 · 共 ${EVENTS.length} 条`;
+  const prev = document.getElementById("evPrev"), next = document.getElementById("evNext");
+  if (prev) prev.disabled = evPage <= 0;
+  if (next) next.disabled = evPage >= pages - 1;
+}
+
+async function loadEvents() {
+  const body = document.getElementById("eventBody");
+  if (!body) return;
+  const all = [];
+  await Promise.all(WS.map(async w => {
+    try {
+      const r = await fetch("/pearl/api/events?w=" + w.id + "&limit=100&t=" + Date.now(), { cache: "no-store" });
+      const d = await r.json();
+      (d.events || []).forEach(e => {
+        if ((e.end - e.start) < 600) return;          // 客户端再兜一层：不足 10 分钟不显示
+        all.push({ ...e, wid: w.id, label: w.label, color: w.color });
+      });
+    } catch (e) { }
+  }));
+  all.sort((a, b) => b.start - a.start);
+  EVENTS = all;
+  renderEventsPage();
+}
+
+
+async function copyAddr() {
+  const w = (WS.find(x => x.earn && x.earn.address) || {}).earn;
+  const addr = (w && w.address) || (WS[0] && WS[0].address) || "";
+  try {
+    await navigator.clipboard.writeText(addr);
+    document.getElementById("copytip").textContent = "已复制 ✓";
+  } catch (e) {
+    document.getElementById("copytip").textContent = "复制失败，请手动选中";
+  }
+  setTimeout(() => { const el = document.getElementById("copytip"); if (el) el.textContent = ""; }, 2000);
+}
+
+function paintAddr() {
+  const el = document.getElementById("pooladdr");
+  if (!el) return;
+  const a = (WS.find(x => x.address) || {}).address || "";
+  el.textContent = a;
+  if (!a) return;
+  const set = (id, url) => { const n = document.getElementById(id); if (n) n.href = url; };
+  set("lnkPool", "https://pearlfortune.org/pearl/#miner=" + a);
+  set("lnkScan", "https://prlscan.com/address/" + a);
+  set("lnkTrack", "https://pearltrack.io/address/" + a);
+}
+
+function paintPrice() {
+  const p = priceUsd;
+  const usd = document.getElementById("pUsd");
+  const cny = document.getElementById("pCny");
+  if (!usd || !cny) return;
+  if (!p) { usd.textContent = "$—"; cny.textContent = "获取中…"; return; }
+  usd.textContent = "$" + Number(p).toFixed(2);
+  cny.textContent = "≈ ¥" + (Number(p) * 6.7).toFixed(2);
+}
+
+function tick() {
+  const t = new Date().toLocaleTimeString("zh-CN");
+  const on = WS.filter(w => w.rig && stateOf(w.rig).on).length;
+  const totalTh = WS.reduce((s, w) => s + ((w.rig && stateOf(w.rig).on && w.rig.total_th) || 0), 0);
+  const totalDay = WS.reduce((s, w) => s + ((w.rig && stateOf(w.rig).on && w.rig.est_day_prl) || 0), 0);
+  const totalProfit = WS.reduce((s, w) => s + ((w.rig && stateOf(w.rig).on && w.rig.profit_cny_day) || 0), 0);
+  document.getElementById("sub").textContent = `${WS.length} 台机器 · ${on} 台在挖 · 更新 ${t}`;
+  document.getElementById("sumbar").innerHTML = `
+    <div class="sum"><div class="k">合计算力</div><div class="v">${fmt(totalTh, 1)} <span style="font-size:12px;color:#b8b8ae">TH/s</span></div></div>
+    <div class="sum"><div class="k">合计日产出</div><div class="v">${fmt(totalDay, 3)} <span style="font-size:12px;color:#b8b8ae">PRL</span></div></div>
+    <div class="sum"><div class="k">合计日净利</div><div class="v">¥${fmt(totalProfit, 2)}</div></div>
+    <div class="sum"><div class="k">在线机器</div><div class="v">${on}/${WS.length}</div></div>`;
+  paintAddr();
+  paintPrice();
+}
+
+document.getElementById("evPrev")?.addEventListener("click", () => { if (evPage > 0) { evPage--; renderEventsPage(); } });
+document.getElementById("evNext")?.addEventListener("click", () => { evPage++; renderEventsPage(); });
+
+document.getElementById("ranges").addEventListener("click", (e) => {
+  const b = e.target.closest(".rbtn");
+  if (b) loadSeries(Number(b.dataset.h));
+});
+
+init();
+setInterval(async () => { await Promise.all(WS.map(w => loadRig(w))); tick(); }, 5000);
+setInterval(async () => { await Promise.all(WS.map(w => loadEarn(w))); loadEvents(); }, 60000);
+setInterval(() => { loadSeries(curH); }, 60000);
+</script>
+<script>
+/* 远程控制：独立 IIFE，不碰看板原有变量 */
+(function () {
+  var API = '/api';
+  var $ = function (id) { return document.getElementById(id); };
+  var cur = 'ZC';
+
+  $('ctlK').value = localStorage.getItem('prl_ctl_key') || '';
+
+  function msg(t, cls) {
+    var m = $('ctlM');
+    m.textContent = t || '';
+    m.className = 'ctl-msg' + (cls ? ' ' + cls : '');
+  }
+
+  function fill() {
+    fetch(API + '/workers?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (ws) {
+        var sel = $('ctlW');
+        sel.innerHTML = '';
+        (ws || []).forEach(function (w) {
+          var o = document.createElement('option');
+          o.value = w.id;
+          o.textContent = w.id + (w.label ? ' · ' + w.label : '');
+          sel.appendChild(o);
+        });
+        if ((ws || []).some(function (w) { return w.id === 'ZC'; })) sel.value = 'ZC';
+        cur = sel.value || 'ZC';
+        refreshState();
+      })
+      .catch(function () { msg('机器列表读取失败', 'err'); });
+  }
+
+  function refreshState() {
+    fetch(API + '/rig?w=' + cur + '&t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var s = String(d.state || '');
+        var t;
+        if (d.online === false) t = '● 离线';
+        else if (s.indexOf('mining') === 0) t = '● 挖矿中';
+        else if (s.indexOf('paused') === 0) t = '● 已暂停';
+        else t = '● ' + (s || '未知');
+        $('ctlS').textContent = t;
+      })
+      .catch(function () { $('ctlS').textContent = '● 连不上'; });
+  }
+
+  function send(action) {
+    var k = $('ctlK').value.trim();
+    if (!k) { msg('先填控制密码再点', 'err'); $('ctlK').focus(); return; }
+    if (action === 'stop' && !confirm('确定暂停 ' + cur + ' 的挖矿？\n暂停会一直保持，直到点「恢复」。')) return;
+    $('ctlStop').disabled = true;
+    $('ctlStart').disabled = true;
+    fetch(API + '/cmd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Ctl-Key': k },
+      body: JSON.stringify({ worker: cur, action: action })
+    })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; });
+      })
+      .then(function (x) {
+        if (x.r.ok) {
+          localStorage.setItem('prl_ctl_key', k);
+          msg((action === 'stop' ? '已发送暂停' : '已发送恢复') + '（序号 ' + x.d.seq + '），约 10 秒生效', 'ok');
+          setTimeout(refreshState, 12000);
+        } else {
+          msg(x.r.status === 401 ? '控制密码不对' : ('失败：' + (x.d.err || x.r.status)), 'err');
+        }
+      })
+      .catch(function () { msg('网络错误，没发出去', 'err'); })
+      .then(function () { $('ctlStop').disabled = false; $('ctlStart').disabled = false; });
+  }
+
+  $('ctlStop').addEventListener('click', function () { send('stop'); });
+  $('ctlStart').addEventListener('click', function () { send('start'); });
+  $('ctlW').addEventListener('change', function () { cur = $('ctlW').value; refreshState(); });
+
+  fill();
+  setInterval(refreshState, 8000);
+})();
+</script>
+</body>
+</html>

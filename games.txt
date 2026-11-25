@@ -1,0 +1,13 @@
+# 挖矿时检测到这些进程就自动暂停，退出后自动恢复
+# 每行一个进程名（不区分大小写），# 开头是注释
+# 以 - 开头的行表示「从默认名单里移除」该项
+#
+# cs2.exe
+# TslGame.exe
+# valorant.exe
+# r5apex.exe
+# gta5.exe
+# eldenring.exe
+
+# 例：某个程序运行时不想暂停挖矿，就写 -程序名
+# -PEAK.exe
